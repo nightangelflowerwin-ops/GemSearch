@@ -44,6 +44,8 @@ class StorageBudget:
                 raise OSError('Not enough free disk space to reserve 10 GB')
             with self.reserve.open('r+b' if self.reserve.exists() else 'w+b') as file:
                 file.truncate(target)
+                if os.name != 'nt' and target:
+                    os.posix_fallocate(file.fileno(), 0, target)
             return self.snapshot()
 
     def snapshot(self):
