@@ -29,6 +29,8 @@ The desktop app stores token records, watched addresses, wallet tracking history
 
 Starting monitoring sends requested token and wallet addresses to market and blockchain providers. Dexscreener supplies market quotes and discovery lists. Solana RPC and PublicNode RPC endpoints receive blockchain queries, including addresses and transaction identifiers. These providers can see your network IP and requested data. Blockchain wallet addresses can be linked to people; tracking them is not anonymous merely because the transactions are public.
 
+Live trades subscribes to selected public pool addresses over a Solana RPC WebSocket while monitoring is active. Transaction signatures, decoded trade history and recovery cursors are stored locally. USD references use the existing market provider. Stopping monitoring closes the stream and pauses processing; saved history remains on disk.
+
 Solscan and Cielo receive requests when their integrations are used. Explorer and account buttons open third-party websites in your browser, where their own privacy policies apply. Optional Telegram notifications send configured alert content to Telegram. The desktop app does not upload its local database to a GemSearch-hosted service.
 
 The local MCP connection exposes supported records to an assistant you connect. That assistant or its provider may process the returned data under its own policies. Do not connect assistants you do not trust with these records.

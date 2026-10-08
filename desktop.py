@@ -20,6 +20,7 @@ from alerts import TokenAlerts
 from DesktopStore import DesktopStore
 from DexMonitor import DexMonitor
 from WalletIngestion import WalletIngestion
+from LiveTrades import LiveTrades
 from TokenLookup import lookup_key, lookup_token
 from TokenSearchView import TokenSearchCard, TokenDetailsDialog
 from DesktopCredentials import load_key, save_key
@@ -97,6 +98,8 @@ class TokenTableModel(QAbstractTableModel):
             if self.headings[index.column()] == 'Market cap':
                 return str(record.get('market_cap_source', 'Not sampled')) + '\nSampled: ' + stamp(record.get('market_cap_updated_at'))
             if self.headings[index.column()] == 'Net 5m':
+                if record.get('live_flow_complete') and current_flow(record) is not None:
+                    return 'Finalized pool buys minus sells in USD. Complete five-minute window ending 45 seconds behind live activity. USD references were sampled at collection.\nSampled: ' + stamp(record.get('live_flow_updated_at'))
                 return 'Indexed five-minute buy volume minus sell volume. Not transfers or liquidity deposits.\nSampled: ' + stamp(record.get('flow_updated_at'))
             if self.headings[index.column()].startswith('Sells '):
                 return 'Sell transaction counts over ' + self.headings[index.column()][6:] + '\nSampled: ' + stamp(record.get('statistics_sampled_at')) + '\nA question mark means the sell count is unavailable.'
@@ -250,6 +253,7 @@ class DesktopWindow(QMainWindow):
         self.alerts = TokenAlerts(store.connect)
         self.monitor = DexMonitor(self.alerts, store.record, store.watchlist, store.tokens, key=load_key(store.directory))
         self.ingestion = WalletIngestion(store)
+        self.live_trades = LiveTrades(store, self.alerts)
         self.stop = threading.Event()
         self.background = background
         self.pending_store = queue.Queue()
@@ -521,7 +525,7 @@ class DesktopWindow(QMainWindow):
         self.wallet_status = QLabel()
         self.wallet_status.setWordWrap(True)
         activity_box.addWidget(self.wallet_status)
-        activity_intro = QLabel('Track a wallet or watch a Solana token, then start monitoring. Activity shows finalized balance changes. SOL changes include fees. Incoming token coverage is partial. Buy/sell decoding and bot classification are not yet available. Initial history covers up to 100 transactions per target.')
+        activity_intro = QLabel('Track a wallet or watch a Solana token, then start monitoring. Activity shows finalized balance changes. SOL changes include fees. Incoming token coverage is partial. Supported pool buys and sells appear in Live trades. Bot classification is not yet available. Initial history covers up to 100 transactions per target.')
         activity_intro.setWordWrap(True)
         activity_box.addWidget(activity_intro)
         wallet_controls = QHBoxLayout()
@@ -559,6 +563,33 @@ class DesktopWindow(QMainWindow):
         activity_box.addWidget(self.wallet_empty, 1)
         self.tabs.addTab(chain_activity, 'On-chain activity')
         self.wallet_activity_tab = self.tabs.indexOf(chain_activity)
+        live_page = QWidget()
+        live_box = QVBoxLayout(live_page)
+        live_box.setContentsMargins(0, 0, 0, 0)
+        self.live_status = QLabel('Start monitoring to receive live trades.')
+        self.live_status.setWordWrap(True)
+        live_box.addWidget(self.live_status)
+        live_notice = QLabel('Live swaps for up to five supported Meteora pools. Confirmed trades may change before finalization. USD values use a market reference sampled at collection. Five-minute flow waits for a complete finalized window and ends 45 seconds behind live activity.')
+        live_notice.setWordWrap(True)
+        live_box.addWidget(live_notice)
+        self.live_selector = QComboBox()
+        self.live_selector.addItem('Automatic pool selection', '')
+        self.live_selector.currentIndexChanged.connect(self.select_live_token)
+        live_box.addWidget(self.live_selector)
+        self.live_table = QTableView()
+        self.live_table.setModel(TokenTableModel(['Time', 'Token', 'Side', 'Token amount', 'Quote amount', 'Pool price', 'USD value', 'Status', 'Trader'], self.live_table))
+        self.live_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.live_table.verticalHeader().setDefaultSectionSize(34)
+        self.live_table.setShowGrid(False)
+        self.live_table.setWordWrap(False)
+        self.live_table.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
+        self.live_table.setEditTriggers(QTableView.EditTrigger.NoEditTriggers)
+        self.live_table.doubleClicked.connect(self.open_live_transaction)
+        live_box.addWidget(self.live_table, 1)
+        self.live_empty = QLabel('No decoded trades collected yet. Choose a supported token or watch it, then start monitoring.')
+        self.live_empty.setWordWrap(True)
+        live_box.addWidget(self.live_empty)
+        self.tabs.addTab(live_page, 'Live trades')
         mcp_page = QWidget()
         mcp_box = QVBoxLayout(mcp_page)
         mcp_box.setSpacing(16)
@@ -682,6 +713,9 @@ class DesktopWindow(QMainWindow):
         if background:
             threading.Thread(target=self.worker, daemon=True).start()
             threading.Thread(target=self.wallet_worker, daemon=True).start()
+            active = lambda: not self.stop.is_set() and self.monitor.status()['enabled']
+            threading.Thread(target=self.live_trades.listen, args=(self.stop, active), daemon=True).start()
+            threading.Thread(target=self.live_trades.work, args=(self.stop, active), daemon=True).start()
             threading.Thread(target=self.storage_worker, daemon=True).start()
             threading.Thread(target=self.snapshot_worker, daemon=True).start()
         self.refresh()
@@ -699,6 +733,35 @@ class DesktopWindow(QMainWindow):
         if session != self.saved_session:
             self.saved_session = session
             self.save_setting('session', session)
+
+    def refresh_live_trades(self, snapshot):
+        live = snapshot.get('live_trades', {}) if self.background else self.live_trades.snapshot()
+        state = live.get('status', {})
+        self.live_status.setText(('Connected' if state.get('connected') else 'Waiting for connection') + ' · ' + str(state.get('pools', 0)) + ' pools · ' + str(live.get('queued', 0)) + ' queued' + (' · ' + state['error'] if state.get('error') else ''))
+        options = [('Automatic pool selection', '')] + [(row.get('name', row['address']), row['address']) for row in snapshot['tokens'] if row.get('chain') == 'solana' and row.get('dex_id') == 'meteora' and 'dyn2' in [str(label).lower() for label in row.get('pair_labels', [])]]
+        if options != [(self.live_selector.itemText(i), self.live_selector.itemData(i)) for i in range(self.live_selector.count())]:
+            self.live_selector.blockSignals(True)
+            self.live_selector.clear()
+            for label, address in options:
+                self.live_selector.addItem(label, address)
+            self.live_selector.setCurrentIndex(max(0, self.live_selector.findData(self.store.get('live_trade_token', ''))))
+            self.live_selector.blockSignals(False)
+        trades = live.get('trades', [])
+        selected = self.live_selector.currentData()
+        if selected:
+            trades = [trade for trade in trades if trade['address'] == selected]
+        names = {row['address']: row.get('name', row['address']) for row in snapshot['tokens']}
+        self.live_table.model().replace(trades, lambda row: [stamp(row['event_time']), names.get(row['address'], row['address'][:8]), row['side'], format(Decimal(row['base_amount']), ',.6f'), format(Decimal(row['quote_amount']), ',.6f') + ' ' + row['quote_symbol'], format(Decimal(row['price_quote']), '.8g') + ' ' + row['quote_symbol'], compact(row['value_usd']), row['confirmation'].capitalize(), row['wallet'][:6] + '...' + row['wallet'][-4:]])
+        self.live_empty.setVisible(not trades)
+        self.live_table.setVisible(bool(trades))
+
+    def select_live_token(self):
+        self.run_store(self.store.set, 'live_trade_token', self.live_selector.currentData() or '')
+        self.refresh()
+
+    def open_live_transaction(self, index):
+        record = self.live_table.model().records[index.row()]
+        QDesktopServices.openUrl(QUrl('https://solscan.io/tx/' + record['signature']))
 
     def wallet_worker(self):
         while not self.stop.wait(1):
@@ -778,6 +841,7 @@ class DesktopWindow(QMainWindow):
                         return
                 snapshot = {'tokens': self.store.tokens(), 'alerts': self.alerts.recent(), 'watchlist': self.store.watchlist()}
                 snapshot['wallet_activity'] = self.ingestion.snapshot()
+                snapshot['live_trades'] = self.live_trades.snapshot()
                 self.store.set('mcp_runtime', {'sampled_at': time.time(), 'monitoring': bool(self.monitor.status()['enabled'])})
                 self.store_signals.snapshot.emit(snapshot)
             except Exception as error:
@@ -885,6 +949,7 @@ class DesktopWindow(QMainWindow):
         self.wallet_table.setVisible(bool(events))
         self.wallet_empty.setVisible(not events)
         self.wallet_empty.setText('No balance changes collected yet. Failed transactions do not change balances.\nQueued transactions will appear after processing.' if activity.get('tracked') or ingestion_state.get('pools') else 'Choose a wallet to track, then start monitoring.')
+        self.refresh_live_trades(snapshot)
         tokens = [r for r in snapshot['tokens'] if r.get('data_source') == 'DexScreener' and current_cap(r) is not None and current_cap(r) >= 40000 and (current_value(r, 'liquidity_usd', 'statistics_sampled_at') or 0) >= 10000]
         connected = bool(self.monitor.client.key)
         self.connection_notice.setText('A token connection is required. Add your key in Settings. Saved records remain available.' if not connected else 'No current tokens meet the $40,000 minimum with $10,000 liquidity. Waiting for data.' if not tokens else '')

@@ -22,5 +22,8 @@ def statistics_fields(data, captured):
 
 
 def current_flow(record):
+    live = record.get('live_net_inflow_m5_usd')
+    if record.get('live_flow_complete') and type(live) in (int, float) and math.isfinite(live) and fresh(record.get('live_flow_updated_at')):
+        return live
     value = record.get('net_inflow_m5_usd')
     return value if record.get('flow_method') == 'indexed_buy_minus_sell_5m' and type(value) in (int, float) and math.isfinite(value) and fresh(record.get('flow_updated_at')) else None
