@@ -16,15 +16,15 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-      - run: python3 scripts/check_text_style.py
-      - run: python3 -m pip install -r requirements-desktop.txt
+      - run: python3 scripts/CheckTextStyle.py
+      - run: python3 -m pip install -r RequirementsDesktop.txt
       - run: npm ci --ignore-scripts
-      - run: python3 -m unittest discover -s tests -v
-      - run: python3 tests/http_extension_smoke.py
-      - run: python3 tests/http_bridge_smoke.py
+      - run: python3 -m unittest discover -s tests -p 'Test*.py' -v
+      - run: python3 tests/HttpExtensionSmoke.py
+      - run: python3 tests/HttpBridgeSmoke.py
       - run: npm test
-      - run: python3 scripts/package_extension.py
+      - run: python3 scripts/PackageExtension.py
       - uses: actions/upload-artifact@v4
         with:
-          name: gem-search-extension
-          path: dist/gem-search-extension.zip
+          name: GemSearchExtension
+          path: dist/GemSearchExtension.zip

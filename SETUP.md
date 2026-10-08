@@ -28,4 +28,4 @@ The unsigned PumpPortal zero-buy construction was probed successfully; live toke
 
 ## Other launch platforms
 
-The built-in instructions above apply to `LAUNCH_PROVIDER=pumpportal`. To connect a different Solana launch platform through your own HTTPS adapter, see [Launch providers](docs/LAUNCH_PROVIDERS.md). Bridge mode does not require local Pinata or wallet credentials; signing and spending enforcement belong to the bridge.
+The built-in instructions above apply to `LAUNCH_PROVIDER=pumpportal`. To connect a different Solana launch platform through your own HTTPS adapter, see [Launch providers](docs/LaunchProviders.md). Bridge mode does not require local Pinata or wallet credentials; signing and spending enforcement belong to the bridge.

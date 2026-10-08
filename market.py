@@ -92,7 +92,7 @@ class MarketRadar:
                 self.pump_error = 'Node.js 22 or newer is required for the Pump feed'
                 stop.wait(30)
                 continue
-            script = Path(__file__).resolve().parent / 'scripts/pump-feed.mjs'
+            script = Path(__file__).resolve().parent / 'scripts/PumpFeed.mjs'
             script_path = str(script)
             if node.endswith('.exe') and script_path.startswith('/mnt/'):
                 script_path = script_path[5].upper() + ':/' + script_path[7:]

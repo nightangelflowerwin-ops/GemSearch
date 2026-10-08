@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { PublicKey, ComputeBudgetProgram } from '@solana/web3.js';
 export const CAP = 25_000_000;
 export const MAX_ATTEMPTS = 5;
-const idl = JSON.parse(readFileSync(new URL('../vendor/pump-idl.json', import.meta.url)));
+const idl = JSON.parse(readFileSync(new URL('../vendor/PumpIdl.json', import.meta.url)));
 
 export function fundingAmount(fee) {
   if (!Number.isSafeInteger(fee) || fee < 0 || fee >= CAP) throw new Error('Invalid funding fee');

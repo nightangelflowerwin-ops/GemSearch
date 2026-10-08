@@ -11,7 +11,7 @@ Gem Search provides five read-only tools for MCP-compatible local assistants. Th
 
 The copied configuration uses the current application path and local data directory. It contains no API keys. Configuration screens vary between assistants. Move the executable only before configuring the assistant, or copy a new configuration afterward.
 
-For a manual setup, set the command to the full path of GemSearch-Desktop.exe and arguments to `["--mcp"]`. The default data directory is the desktop app's local directory. An optional `--data-dir` selects another local instance at launch, not through a tool call.
+For a manual setup, set the command to the full path of GemSearch.exe and arguments to `["--mcp"]`. The default data directory is the desktop app's local directory. An optional `--data-dir` selects another local instance at launch, not through a tool call.
 
 This release uses standard input and output, with no network listener. The assistant launches the same executable in MCP mode. That mode reads saved data without opening another monitor, starting a scanner or loading data-provider credentials. It can run while the desktop app is open. With the desktop closed, saved records remain readable and monitoring status eventually becomes unknown.
 
@@ -39,4 +39,4 @@ Read-only tools cannot modify watchlists, trade, change settings or start and st
 
 Use a host that supports local MCP servers over stdio. Assistants that only accept remote HTTPS MCP URLs need a separately hosted, authenticated service, which is not part of this release. MCP support depends on the host application, not the underlying language model alone.
 
-For a source installation, install requirements-desktop.txt and run `python desktop.py --mcp`. The protocol and output handling use the official Python MCP SDK. Run the MCP tests with `python -m unittest discover -s tests -p test_gem_mcp.py`.
+For a source installation, install RequirementsDesktop.txt and run `python desktop.py --mcp`. The protocol and output handling use the official Python MCP SDK. Run the MCP tests with `python -m unittest discover -s tests -p TestGemMcp.py`.

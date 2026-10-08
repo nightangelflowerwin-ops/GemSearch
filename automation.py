@@ -11,7 +11,7 @@ import subprocess
 import sys
 import time
 import zlib
-from launch_provider import configured_provider, bridge_missing, run_bridge
+from LaunchProvider import configured_provider, bridge_missing, run_bridge
 
 CAP = 25_000_000
 DAILY_COUNT = 5

@@ -27,8 +27,8 @@ from automation import Automation, discover_free, load_env
 from grok import GrokReview
 from market import MarketRadar
 from alerts import TokenAlerts
-from token_monitor import TokenMonitor
-from telegram_alerts import TelegramDelivery
+from TokenMonitor import TokenMonitor
+from TelegramAlerts import TelegramDelivery
 from jev import Jev
 
 ROOT = Path(__file__).resolve().parent
@@ -674,11 +674,11 @@ class Handler(BaseHTTPRequestHandler):
                                                    'launch': (AUTO.provider_status()['label'] + ' · ' + AUTO.mode()) if AUTO else 'offline',
                                                    'free_feed': os.getenv('FREE_FEED_ENABLED', '1') == '1'}})
         files = {'/capsule.js': ('capsule.js', 'text/javascript; charset=utf-8'), '/': ('index.html', 'text/html; charset=utf-8'), '/app.js': ('app.js', 'text/javascript; charset=utf-8'), '/style.css': ('style.css', 'text/css; charset=utf-8')}
-        files.update({'/spider-demo':('../docs/spider-demo.html','text/html; charset=utf-8'),
+        files.update({'/spider-demo':('../docs/SpiderDemo.html','text/html; charset=utf-8'),
                       '/market.js':('market.js','text/javascript; charset=utf-8'),
                       '/alerts.js':('alerts.js','text/javascript; charset=utf-8'),
-                      '/spider-demo.js':('../docs/spider-demo.js','text/javascript; charset=utf-8'),
-                      '/spider-ui.js':('../extension/spider-ui.js','text/javascript; charset=utf-8')})
+                      '/SpiderDemo.js':('../docs/SpiderDemo.js','text/javascript; charset=utf-8'),
+                      '/SpiderUi.js':('../extension/SpiderUi.js','text/javascript; charset=utf-8')})
         if path in files:
             name, mime = files[path]
             return self.send(200, (ROOT / 'static' / name).read_bytes(), mime)

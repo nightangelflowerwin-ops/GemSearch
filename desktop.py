@@ -11,20 +11,20 @@ from urllib.parse import quote
 from PySide6.QtCore import Qt, QEvent, QTimer, QUrl, QLockFile, QAbstractTableModel, QObject, Signal
 from PySide6.QtGui import QAction, QColor, QIcon, QPainter, QPixmap, QDesktopServices, QShortcut, QKeySequence
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox, QLineEdit, QTabWidget, QTableView, QHeaderView, QSystemTrayIcon, QMenu, QCheckBox, QMessageBox, QScrollArea, QFileDialog, QListWidget, QPlainTextEdit
-from market_metrics import current_flow
-from token_filters import DEFAULTS, matches, sort_key, activity_values, filter_summary
-from filter_dialog import FilterDialog
+from MarketMetrics import current_flow
+from TokenFilters import DEFAULTS, matches, sort_key, activity_values, filter_summary
+from FilterDialog import FilterDialog
 from chains import EVM
-from data_quality import current_cap, current_value, mint_status
+from DataQuality import current_cap, current_value, mint_status
 from alerts import TokenAlerts
-from desktop_store import DesktopStore
-from dex_monitor import DexMonitor
-from wallet_ingestion import WalletIngestion
-from token_lookup import lookup_key, lookup_token
-from token_search_view import TokenSearchCard, TokenDetailsDialog
-from desktop_credentials import load_key, save_key
-from cielo_client import CieloClient
-from kolscan_directory import bundled_wallets, read_wallets, SOURCE, CAPTURED
+from DesktopStore import DesktopStore
+from DexMonitor import DexMonitor
+from WalletIngestion import WalletIngestion
+from TokenLookup import lookup_key, lookup_token
+from TokenSearchView import TokenSearchCard, TokenDetailsDialog
+from DesktopCredentials import load_key, save_key
+from CieloClient import CieloClient
+from KolscanDirectory import bundled_wallets, read_wallets, SOURCE, CAPTURED
 
 
 def icon():
@@ -334,7 +334,7 @@ class DesktopWindow(QMainWindow):
         self.minimize_outside = QCheckBox('Minimize when I click outside')
         self.minimize_outside.setChecked(store.get('minimize_on_deactivate', True))
         self.minimize_outside.toggled.connect(lambda value: self.save_setting('minimize_on_deactivate', value))
-        self.applied_filters = dict(DEFAULTS, **store.get('token_filters', {}))
+        self.applied_filters = dict(DEFAULTS, **store.get('TokenFilters', {}))
         self.search = QLineEdit()
         self.search.setPlaceholderText('Search token name, chain or address')
         self.search.textChanged.connect(self.filter_changed)
@@ -793,12 +793,12 @@ class DesktopWindow(QMainWindow):
         self.solscan_key.setFocus()
 
     def copy_mcp_setup(self):
-        from gem_mcp import launch_config
+        from GemMcp import launch_config
         QApplication.clipboard().setText(json.dumps(launch_config(self.store.directory), indent=2))
         self.mcp_status.setText('Connection setup copied. Add it to your assistant’s MCP server configuration. No API keys are included.')
 
     def test_mcp_connection(self):
-        from gem_mcp import launch_config, probe_connection
+        from GemMcp import launch_config, probe_connection
         self.mcp_test.setEnabled(False)
         self.mcp_status.setText('Testing the local MCP handshake and available tools...')
         config = launch_config(self.store.directory)
@@ -951,7 +951,7 @@ class DesktopWindow(QMainWindow):
         dialog = FilterDialog(self.applied_filters, exchanges, self)
         if dialog.exec():
             self.applied_filters = dialog.result_settings
-            self.save_setting('token_filters', self.applied_filters)
+            self.save_setting('TokenFilters', self.applied_filters)
             self.pages['Live tokens'] = self.pages['Watchlist'] = 0
             self.refresh()
 
@@ -1256,7 +1256,7 @@ def main():
     parser.add_argument('--mcp', action='store_true')
     args = parser.parse_args()
     if args.mcp:
-        from gem_mcp import run_server
+        from GemMcp import run_server
         directory = Path(args.data_dir) if args.data_dir else Path(os.environ.get('LOCALAPPDATA', str(Path.home()))) / 'GemSearch'
         run_server(directory)
         return
@@ -1312,7 +1312,7 @@ def main():
     directory = Path(args.data_dir) if args.data_dir else Path(os.environ.get('LOCALAPPDATA', str(Path.home()))) / 'GemSearch'
     store = DesktopStore(directory)
     if args.responsiveness_test:
-        from desktop_checks import seed_responsiveness_data
+        from DesktopChecks import seed_responsiveness_data
         seed_responsiveness_data(store)
     lock = QLockFile(str(directory / 'desktop.lock'))
     if not lock.tryLock(100):
@@ -1328,7 +1328,7 @@ def main():
     if not args.smoke_test and not args.responsiveness_test:
         QTimer.singleShot(250, window.reopen)
     if args.responsiveness_test:
-        from desktop_checks import run_responsiveness_check
+        from DesktopChecks import run_responsiveness_check
         check_timer = run_responsiveness_check(application, window, store, args.responsiveness_test)
     if args.smoke_test:
         store.record('base', '0x' + 'a' * 40, {'data_source': 'DexScreener', 'name': 'Fixture token · test data', 'liquidity_usd': 10000, 'statistics_sampled_at': time.time(), 'market_cap_usd': 42000, 'market_cap_updated_at': time.time(), 'price_usd': 0.000042, 'price_sampled_at': time.time(), 'net_inflow_m5_usd': 125000, 'flow_method': 'indexed_buy_minus_sell_5m', 'flow_updated_at': time.time()})

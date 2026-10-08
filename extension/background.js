@@ -65,7 +65,7 @@ async function wakeScanner(){
     if(!response?.active)throw Error('Content script needs configuration');
   }catch{
     try{
-      await chrome.scripting.executeScript({target:{tabId:scanner.tabId},files:['shared.js','spider-ui.js','content.js']});
+      await chrome.scripting.executeScript({target:{tabId:scanner.tabId},files:['shared.js','SpiderUi.js','content.js']});
       await chrome.tabs.sendMessage(scanner.tabId,{type:'configure',scanner});
     }catch{
       await chrome.storage.local.set({scanner:{...scanner,waiting:'Cannot reach the feed. Open that tab and release the spider again.'}});return;
@@ -124,7 +124,7 @@ chrome.runtime.onMessage.addListener((message,sender,reply)=>{
       await chrome.storage.local.set({scanner});
       if(scanner.expiresAt!==null)await chrome.alarms.create('scanner-deadline',{when:scanner.expiresAt});
       try{
-        await chrome.scripting.executeScript({target:{tabId:tab.id},files:['shared.js','spider-ui.js','content.js']});
+        await chrome.scripting.executeScript({target:{tabId:tab.id},files:['shared.js','SpiderUi.js','content.js']});
         await chrome.tabs.sendMessage(tab.id,{type:'configure',scanner});
       }catch(error){await finishScanner('start-failed');throw error;}
       return {ok:true,scanner};

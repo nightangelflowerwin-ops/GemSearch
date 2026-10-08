@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import { Keypair, TransactionMessage, VersionedTransaction, TransactionInstruction, SystemProgram, ComputeBudgetProgram, PublicKey } from '@solana/web3.js';
 import { CAP, fundingAmount, validateCreate } from '../launch/guard.mjs';
 import { deliverOnce } from '../launch/transport.mjs';
-const idl=JSON.parse(fs.readFileSync(new URL('../vendor/pump-idl.json',import.meta.url)));
+const idl=JSON.parse(fs.readFileSync(new URL('../vendor/PumpIdl.json',import.meta.url)));
 const payer=Keypair.generate().publicKey, mint=Keypair.generate().publicKey;
 const expected={payer:payer.toBase58(),mint:mint.toBase58(),name:'Orbit Bloom',symbol:'ORB',uri:'https://ipfs.io/ipfs/test'};
 function string(s){const b=Buffer.from(s);const n=Buffer.alloc(4);n.writeUInt32LE(b.length);return Buffer.concat([n,b]);}
@@ -22,7 +22,7 @@ test('reject wrong creator and changed token metadata',()=>{const t=tx([instruct
 test('reject double create and excessive priority price',()=>{assert.throws(()=>validateCreate(tx([instruction(),instruction()]),expected));assert.throws(()=>validateCreate(tx([ComputeBudgetProgram.setComputeUnitPrice({microLamports:100001}),instruction()]),expected),/compute/);});
 test('reject buy disguised as Pump instruction',()=>{const i=instruction();i.data[0]^=255;assert.throws(()=>validateCreate(tx([i]),expected),/Only one/);});
 test('reject unexpected launch options',()=>{const i=instruction('create_v2');i.data[i.data.length-11]=1;assert.throws(()=>validateCreate(tx([i]),expected),/launch mode/);});
-test('actual unsigned PumpPortal zero-buy response with resolved lookup tables',()=>{const f=JSON.parse(fs.readFileSync(new URL('./provider-fixture.json',import.meta.url)));const t=VersionedTransaction.deserialize(Buffer.from(f.raw,'base64'));assert.equal(validateCreate(t,f.expected,f.keys),true);assert.throws(()=>validateCreate(t,f.expected),/must be resolved/);assert.ok(t.signatures.every(s=>s.every(b=>b===0)));});
+test('actual unsigned PumpPortal zero-buy response with resolved lookup tables',()=>{const f=JSON.parse(fs.readFileSync(new URL('./ProviderFixture.json',import.meta.url)));const t=VersionedTransaction.deserialize(Buffer.from(f.raw,'base64'));assert.equal(validateCreate(t,f.expected,f.keys),true);assert.throws(()=>validateCreate(t,f.expected),/must be resolved/);assert.ok(t.signatures.every(s=>s.every(b=>b===0)));});
 test('ambiguous network response never causes a second send, including restart',async()=>{
   let state={funding:{signature:'test',raw:'dGVzdA=='}};let durable;let sends=0;
   const rpc={getSignatureStatuses:async()=>({value:[null]}),sendRawTransaction:async()=>{assert.equal(durable.funding.attempted,true);sends++;throw Error('timeout');}};

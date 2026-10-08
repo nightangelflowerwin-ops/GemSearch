@@ -14,7 +14,7 @@ Enter credentials only in the local Settings fields. API access is separate from
 
 Import wallet lists using CSV or JSON with name and address fields. Imports remain local and do not add wallet addresses to the token watchlist.
 
-Download the ZIP from Releases for the executable and bundled licenses. The executable is unsigned. Build using requirements-desktop.txt and scripts/build_desktop.py.
+Download the ZIP from Releases for the executable and bundled licenses. The executable is unsigned. Build using RequirementsDesktop.txt and scripts/BuildDesktop.py.
 
 The current preview uses a public market feed without requiring a key. Quotes are polled every 15 seconds and discovery every minute. Discovery covers profiles, boosted entries, saved tokens and your watchlist, not the entire market. Up to 300 addresses are refreshed per cycle with saved addresses rotated. The highest-liquidity pair supplies each token quote. Reported market capitalization is never replaced with fully diluted valuation.
 
@@ -28,7 +28,7 @@ Filters opens a range editor with minimum and maximum liquidity, market capitali
 
 Proprietary trending scores, trader counts, ads and profile filters are not included because the public quote response does not provide complete data for them. Filters operate on the app's sampled discovery set and selected highest-liquidity pair.
 
-![Example filter editor](desktop-filters.png)
+![Example filter editor](DesktopFilters.png)
 
 The Chain filter selects one network or all supported networks. Live tables identify each network, and Explorer opens its token explorer. EVM watchlist addresses are normalized while token identity remains network plus address. EVM checks validate RPC chain ID, deployed contract code, totalSupply and decimals at a recorded block. These reads do not establish circulating supply, price accuracy, finality, safety or net inflow. Verification refreshes up to 20 EVM contracts per cycle with networks rotated; unavailable or unrefreshed checks remain pending. Market quotes retain the existing refresh and sampling limits.
 

@@ -61,7 +61,7 @@ npm audit
 
 27 тестов: поиск, SSRF-защита, импорт, квоты, перезапуск, dry/live, исключение demo, инструкции транзакций, пауза, сохранение перед отправкой и запрет повторной отправки после таймаута. npm audit: 0 известных уязвимостей на момент проверки.
 
-Проверен настоящий ответ PumpPortal: unsigned zero-buy create, 3 инструкции, таблицы адресов и совместимый вариант create_v2. Публичный fixture без ключей - tests/provider-fixture.json. Повторить: `node launch/check-provider.mjs`; он ничего не подписывает и не отправляет в блокчейн.
+Проверен настоящий ответ PumpPortal: unsigned zero-buy create, 3 инструкции, таблицы адресов и совместимый вариант create_v2. Публичный fixture без ключей - tests/ProviderFixture.json. Повторить: `node launch/CheckProvider.mjs`; он ничего не подписывает и не отправляет в блокчейн.
 
 **Реальное создание токена и загрузка Pinata ещё не проверены:** не подключены Pinata JWT и средства. Успешный unsigned probe не заменяет on-chain end-to-end проверку. При изменении формата провайдера валидатор останавливает запуск. Визуальная проверка через инструмент браузера недоступна; HTTP и код интерфейса проверяются отдельно.
 
@@ -78,4 +78,4 @@ npm audit
 
 ## Other launch platforms
 
-The built-in instructions above apply to `LAUNCH_PROVIDER=pumpportal`. To connect a different Solana launch platform through your own HTTPS adapter, see [Launch providers](LAUNCH_PROVIDERS.md). Bridge mode does not require local Pinata or wallet credentials; signing and spending enforcement belong to the bridge.
+The built-in instructions above apply to `LAUNCH_PROVIDER=pumpportal`. To connect a different Solana launch platform through your own HTTPS adapter, see [Launch providers](LaunchProviders.md). Bridge mode does not require local Pinata or wallet credentials; signing and spending enforcement belong to the bridge.

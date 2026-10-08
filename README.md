@@ -34,7 +34,7 @@ The desktop app provides a workspace for tokens, watchlists, saved records and n
 
 ## ✨ What's new: the spider catches it early
 
-<p align="center"><img src="docs/whats-new.svg" alt="Emerging signals: cashtags, Solana addresses, emerging phrases and growth" width="100%"></p>
+<p align="center"><img src="docs/WhatsNew.svg" alt="Emerging signals: cashtags, Solana addresses, emerging phrases and growth" width="100%"></p>
 
 <!-- 🎬 Screen recording: drag the .mp4 into GitHub's README editor and keep the generated link on its own line here. -->
 
@@ -57,10 +57,10 @@ A narrative is most interesting **before it has a name**. Until now the spider s
 
 ```sh
 python3 app.py                       # terminal 1: the local engine
-python3 scripts/spider_demo.py       # terminal 2: stream fictional sample posts with live logs
+python3 scripts/SpiderDemo.py       # terminal 2: stream fictional sample posts with live logs
 ```
 
-The walkthrough sends each post through the extension API and prints what the real engine reports back: captures, engine events, every lead with its growth and four checks. Use `scripts/sample_signals.py` instead for a silent load, or `--speed 2` for a faster run.
+The walkthrough sends each post through the extension API and prints what the real engine reports back: captures, engine events, every lead with its growth and four checks. Use `scripts/SampleSignals.py` instead for a silent load, or `--speed 2` for a faster run.
 
 1. Open **http://127.0.0.1:8787**, wait ~10 seconds for the spider loop.
 2. In **Discovery**, switch **All types** to **Tickers $**, then **New narratives**.
@@ -90,7 +90,7 @@ The spider is a browser overlay, not an operating-system desktop pet. It cannot 
 
 This is an open-source developer preview, not a promise of early alpha. A shortlist is a research lead, not proof of safety, originality or future returns.
 
-<p align="center"><img src="docs/field-guide.svg" alt="Four features: visible-post spider, source evidence, offline queue and local rules" width="100%"></p>
+<p align="center"><img src="docs/FieldGuide.svg" alt="Four features: visible-post spider, source evidence, offline queue and local rules" width="100%"></p>
 
 ## What it does
 
@@ -117,12 +117,12 @@ Open a project in **Discovery**, click **Discovery capsule**, choose **Aurora** 
 
 ## Pick your first adventure
 
-<p align="center"><img src="docs/research-modes.svg" alt="Three research modes: fictional playground, local feed scout and optional paid Grok review" width="100%"></p>
+<p align="center"><img src="docs/ResearchModes.svg" alt="Three research modes: fictional playground, local feed scout and optional paid Grok review" width="100%"></p>
 
 - **🎨 Just look around:** launch the backend and open `/spider-demo` to meet the spider on fictional posts.
 - **🕷️ Explore your feed:** pair the extension, open X and release the spider on the active tab.
 - **🧠 Ask more questions:** add your own xAI key to enable the four Grok reviewers.
-- **📂 Bring existing research:** import JSON captures using the documented [data format](docs/DATA_FORMAT.md).
+- **📂 Bring existing research:** import JSON captures using the documented [data format](docs/DataFormat.md).
 - **🌱 Broaden the inputs:** run `python3 app.py --autopilot` for the Hacker News scanner and inbox watcher.
 
 ## Quick start
@@ -150,7 +150,7 @@ Keep the browser and selected feed tab open. Browsers can throttle background ex
 
 ## Give it four Grok perspectives
 
-<p align="center"><img src="docs/grok-seats.svg" alt="Lookout, Maker, Skeptic and Runner - four evidence-bound Grok reviewers" width="100%"></p>
+<p align="center"><img src="docs/GrokSeats.svg" alt="Lookout, Maker, Skeptic and Runner - four evidence-bound Grok reviewers" width="100%"></p>
 
 Add your key **locally** to `.env`, then restart the engine:
 
@@ -176,7 +176,7 @@ The Grok adapter is implemented and covered by mocked tests. A real paid Grok ca
 
 ## Follow a discovery
 
-<p align="center"><img src="docs/discovery-trail.svg" alt="Discovery pipeline: spot visible posts, group topics, explore links, question evidence and revisit findings" width="100%"></p>
+<p align="center"><img src="docs/DiscoveryTrail.svg" alt="Discovery pipeline: spot visible posts, group topics, explore links, question evidence and revisit findings" width="100%"></p>
 
 1. **Spot a recurring idea.** The spider captures rendered posts as you explore a visible X tab.
 2. **Connect the mentions.** JEV groups supported topics and project links, deduplicates captures and checks author diversity.
@@ -234,11 +234,11 @@ A browser token can only submit captures and read scanner status. It cannot laun
 
 Select `LAUNCH_PROVIDER=pumpportal` or `bridge` in `.env`. An arbitrary platform website URL does not work: it needs a compatible adapter. External bridges manage their own signing and must enforce the requested 0.025 SOL cap; their results are reported, not independently verified by Gem Search. Other chains are not supported by the current SOL budget policy.
 
-**[Connection guide and API contract →](docs/LAUNCH_PROVIDERS.md)**
+**[Connection guide and API contract →](docs/LaunchProviders.md)**
 
 ## Other sources and optional launch module
 
-- JSON import and `data/inbox/` support external collectors. See [data format](docs/DATA_FORMAT.md).
+- JSON import and `data/inbox/` support external collectors. See [data format](docs/DataFormat.md).
 - `python3 app.py --autopilot` also enables the free Hacker News narrative scanner and inbox watcher. HN attention is labeled separately from X captures.
 - Official X recent-search access remains optional and paid; `ENABLE_PAID_X=0` by default.
 - The earlier experimental Pump.fun launcher remains available as a **separate opt-in module**, dry-run by default. Browser captures cannot enter it without `SPIDER_ALLOW_LAUNCH=1`.
@@ -250,10 +250,10 @@ Select `LAUNCH_PROVIDER=pumpportal` or `bridge` in `.env`. An arbitrary platform
 npm ci --ignore-scripts
 python3 -m unittest discover -s tests -v
 npm test
-python3 scripts/package_extension.py
+python3 scripts/PackageExtension.py
 ```
 
-The ZIP is written to `dist/gem-search-extension.zip`; it contains extension assets only. Extract it and load that directory as an unpacked extension. GitHub Actions also uploads the ZIP as a build artifact. This is **not** a Chrome Web Store listing.
+The ZIP is written to `dist/GemSearchExtension.zip`; it contains extension assets only. Extract it and load that directory as an unpacked extension. GitHub Actions also uploads the ZIP as a build artifact. This is **not** a Chrome Web Store listing.
 
 Tests cover capture validation, route exclusions, deduplication, narratives, Grok caching/allowances/failures, local-network blocking, queue recovery, and optional transaction guards. They do not establish that every future X layout will work. Full browser installation and real-account capture still need manual QA against the current X markup. See [contributing](CONTRIBUTING.md).
 
