@@ -22,3 +22,15 @@ No Gem Search telemetry or hosted collection endpoint is implemented. The local 
 Processed raw browser captures older than seven days are purged during subsequent ingestion; evidence excerpts already attached to project dossiers can remain until you remove your local database. Pending extension items stay until acknowledged or until you use Disconnect & clear local queue. Turning off Grok stops future model calls but does not recall data already sent to a provider.
 
 Stop the server before deleting local research data. If using the optional launch module, preserve transaction state and wallet backups rather than deleting the whole data directory. Never share that directory in a public issue or repository.
+
+## Windows desktop app
+
+The desktop app stores token records, watched addresses, wallet tracking history, alerts and settings locally in `%LOCALAPPDATA%/GemSearch` by default. It has no GemSearch signup or subscription checkout. No session replay, keystroke recording SDK, marketing email sender or remote font loader is implemented. Interface fonts come from the operating system.
+
+Starting monitoring sends requested token and wallet addresses to market and blockchain providers. Dexscreener supplies market quotes and discovery lists. Solana RPC and PublicNode RPC endpoints receive blockchain queries, including addresses and transaction identifiers. These providers can see your network IP and requested data. Blockchain wallet addresses can be linked to people; tracking them is not anonymous merely because the transactions are public.
+
+Solscan and Cielo receive requests when their integrations are used. Explorer and account buttons open third-party websites in your browser, where their own privacy policies apply. Optional Telegram notifications send configured alert content to Telegram. The desktop app does not upload its local database to a GemSearch-hosted service.
+
+The local MCP connection exposes supported records to an assistant you connect. That assistant or its provider may process the returned data under its own policies. Do not connect assistants you do not trust with these records.
+
+Stopping monitoring stops new scheduled collection. It does not delete stored history or recall requests already sent. Close the app before removing local data, and keep credentials, databases and wallet information out of public bug reports.
