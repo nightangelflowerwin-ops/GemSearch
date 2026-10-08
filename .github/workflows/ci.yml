@@ -16,6 +16,7 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+      - run: python3 scripts/check_text_style.py
       - run: python3 -m pip install -r requirements-desktop.txt
       - run: npm ci --ignore-scripts
       - run: python3 -m unittest discover -s tests -v
