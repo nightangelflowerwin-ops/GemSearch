@@ -1,4 +1,5 @@
 import tempfile
+from itertools import permutations
 import time
 import unittest
 from pathlib import Path
@@ -25,6 +26,34 @@ class DexMonitorTests(unittest.TestCase):
         self.assertIsNone(result['token_created_at'])
         self.assertEqual(result['price_usd'], 0.00000042)
         self.assertEqual(result['buy_count_m5'], 100)
+
+    def test_active_pool_metrics_stay_consistent_in_every_response_order(self):
+        active = dict(pair(28203.32, 140567), pairAddress='active-pool', priceUsd='0.0001405', volume={'m5': 5000, 'h24': 1100000}, txns={'m5': {'buys': 120, 'sells': 75}})
+        pools = [
+            dict(pair(), pairAddress='old-pool', marketCap=28363.41, liquidity=None),
+            dict(pair(1753.08, 146249), pairAddress='small-pool'),
+            dict(pair(0.54, 145210), pairAddress='dust-pool'),
+            dict(pair(999999, 9999999), chainId='base', pairAddress='wrong-chain'),
+            active,
+        ]
+        for response in permutations(pools):
+            with self.subTest(order=[p['pairAddress'] for p in response]):
+                selected = select_pairs(list(response), {ADDRESS}, time.time())[ADDRESS]
+                self.assertEqual(selected['market_pair'], 'active-pool')
+                self.assertEqual(selected['market_cap_usd'], 140567)
+                self.assertEqual(selected['price_usd'], 0.0001405)
+                self.assertEqual(selected['liquidity_usd'], 28203.32)
+                self.assertEqual(selected['volume_h24_usd'], 1100000)
+                self.assertEqual(selected['buy_count_m5'], 120)
+                self.assertEqual(selected['sell_count_m5'], 75)
+
+    def test_scanner_excludes_missing_zero_and_below_minimum_pool_liquidity(self):
+        from token_filters import DEFAULTS, matches
+        for liquidity in [None, 0, 9999.99, 10000]:
+            with self.subTest(liquidity=liquidity):
+                selected = select_pairs([pair(liquidity, 50000)], {ADDRESS}, time.time())[ADDRESS]
+                selected.update(chain='solana', address=ADDRESS)
+                self.assertEqual(matches(selected, DEFAULTS), liquidity == 10000)
 
     def test_scanner_replaces_old_pool_with_active_pool(self):
         from token_filters import DEFAULTS, matches
