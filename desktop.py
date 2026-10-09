@@ -135,6 +135,7 @@ class TokenTableModel(QAbstractTableModel):
 class TokenTable(QTableView):
     def configure_market(self):
         self.setObjectName('marketTable')
+        self.setColumnHidden(10, True)
         self.setWordWrap(True)
         self.setTextElideMode(Qt.TextElideMode.ElideNone)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
@@ -151,7 +152,7 @@ class TokenTable(QTableView):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         if self.objectName() == 'marketTable':
-            available = self.viewport().width() - sum(self.columnWidth(i) for i in range(1, self.model().columnCount()))
+            available = self.viewport().width() - sum(self.columnWidth(i) for i in range(1, self.model().columnCount()) if not self.isColumnHidden(i))
             self.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch if available >= 240 else QHeaderView.ResizeMode.Fixed)
             if available < 240:
                 self.setColumnWidth(0, 240)
