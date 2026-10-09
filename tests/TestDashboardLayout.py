@@ -13,7 +13,7 @@ class DashboardLayoutTests(unittest.TestCase):
         table = TokenTable()
         table.setModel(TokenTableModel(['Token', 'Chain', 'Price', 'Market cap', 'Vol 24h', 'Vol 5m', 'Net 5m', 'Buys', 'Liquidity', 'Sells', 'Time'], table))
         table.configure_market()
-        name = 'Price Obsessed Agent With A Complete Unabridged Token Name'
+        name = 'Price Obsessed Agent With A Complete Unabridged Token Name ' * 4
         records = [{'name': name, 'address': str(i)} for i in range(100)]
         table.model().replace(records, lambda row: [row['name'], 'SOLANA', '$0.001', '$141K', '$1.1M', '$20K', '$3K', '123', '$28K', '45', '12:00'])
         table.show()
