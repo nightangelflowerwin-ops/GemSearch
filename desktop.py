@@ -142,21 +142,29 @@ class TokenTable(QTableView):
         header = self.horizontalHeader()
         header.setStretchLastSection(False)
         header.setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
-        for index, width in enumerate((280, 75, 100, 105, 95, 90, 90, 70, 100, 80, 90)):
-            self.setColumnWidth(index, width)
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        header.setMinimumSectionSize(70)
+        header.setMinimumSectionSize(60)
         self.verticalHeader().setMinimumSectionSize(42)
         self.verticalHeader().setDefaultSectionSize(42)
+        self.layout_market()
+
+    def layout_market(self):
+        widths = [240, 65, 90, 95, 85, 100, 90, 80, 90, 80]
+        total = max(self.viewport().width(), sum(widths))
+        extra = total - sum(widths)
+        widths[0] += min(180, int(extra * 0.65))
+        remaining = total - sum(widths)
+        for index in range(1, len(widths)):
+            share = remaining // (len(widths) - index)
+            widths[index] += share
+            remaining -= share
+        for index, width in enumerate(widths):
+            self.setColumnWidth(index, width)
+        self.resizeRowsToContents()
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
         if self.objectName() == 'marketTable':
-            available = self.viewport().width() - sum(self.columnWidth(i) for i in range(1, self.model().columnCount()) if not self.isColumnHidden(i))
-            self.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch if available >= 240 else QHeaderView.ResizeMode.Fixed)
-            if available < 240:
-                self.setColumnWidth(0, 240)
-            self.resizeRowsToContents()
+            self.layout_market()
 
     def rowCount(self):
         return self.model().rowCount()

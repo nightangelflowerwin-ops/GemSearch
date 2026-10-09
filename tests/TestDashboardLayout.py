@@ -23,6 +23,12 @@ class DashboardLayoutTests(unittest.TestCase):
                 self.app.processEvents()
                 table.resizeRowsToContents()
                 self.assertGreaterEqual(table.columnWidth(0), 240)
+                self.assertLessEqual(table.columnWidth(0), 420)
+                self.assertTrue(table.isColumnHidden(10))
+                if width >= 1110:
+                    self.assertEqual(table.horizontalScrollBar().maximum(), 0)
+                else:
+                    self.assertGreater(table.horizontalScrollBar().maximum(), 0)
                 if width < 1200:
                     self.assertGreater(table.rowHeight(0), 42)
                 self.assertEqual(table.model().data(table.model().index(0, 0)), name)
