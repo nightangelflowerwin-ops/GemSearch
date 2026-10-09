@@ -113,6 +113,16 @@ class NavigationTests(unittest.TestCase):
         self.app.processEvents()
         self.directory.cleanup()
 
+    def test_feed_diagnostics_stay_out_of_token_search(self):
+        self.window.monitor.error = 'Some quotes delayed: ValueError'
+        self.window.monitor.flow_error = 'Net flow requires USD buy and sell totals'
+        self.window.refresh()
+        self.assertNotIn('ValueError', self.window.connection_notice.text())
+        self.assertNotIn('Net flow', self.window.connection_notice.text())
+        self.assertIn('Quotes delayed', self.window.status_label.text())
+        self.assertIn('ValueError', self.window.connection_diagnostics.toPlainText())
+        self.assertIn('Net flow', self.window.connection_diagnostics.toPlainText())
+
     def test_escape_clears_search_and_returns_to_live_tokens(self):
         self.window.search.setText('example')
         self.window.search.setFocus()

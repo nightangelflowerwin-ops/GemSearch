@@ -796,6 +796,11 @@ class DesktopWindow(QMainWindow):
         settings.addWidget(add)
         settings.addWidget(QLabel('COVERAGE\nSolana, Ethereum, Base, BNB Chain, Arbitrum, Polygon, Optimism and Avalanche. Some activity and alert features remain unavailable.'))
         settings.addWidget(QLabel('Closing this window keeps monitoring in the system tray. Quit stops monitoring.\nUntil I stop and timed deadlines are retained when the app is reopened.\nMonitoring cannot run while your computer is asleep or powered off.'))
+        settings.addWidget(QLabel('Connection diagnostics'))
+        self.connection_diagnostics = QPlainTextEdit()
+        self.connection_diagnostics.setReadOnly(True)
+        self.connection_diagnostics.setMaximumHeight(140)
+        settings.addWidget(self.connection_diagnostics)
         settings.addWidget(QLabel('Local data: ' + str(store.directory)))
         settings.addStretch()
         settings_scroll = QScrollArea()
@@ -1061,7 +1066,7 @@ class DesktopWindow(QMainWindow):
 
     def refresh(self):
         state = self.monitor.status()
-        self.status_label.setText(('Monitoring' if state['enabled'] else 'Paused') + (' · Connection needs attention. See Settings.' if state['error'] else ' · Token refresh') + (' · Valuation unavailable' if state.get('valuation_error') else ''))
+        self.status_label.setText(('Monitoring' if state['enabled'] else 'Paused') + (' · Quotes delayed. Retrying.' if state['error'] else ' · Token refresh') + (' · Valuation unavailable' if state.get('valuation_error') else ''))
         self.status_label.setToolTip(str(state['checked']) + ' measured flow samples. ' + str(state['skipped']) + ' unavailable flow samples. Last successful response: ' + stamp(state.get('last_success_at')))
         self.persist_session()
         storage = self.storage_state
@@ -1089,12 +1094,11 @@ class DesktopWindow(QMainWindow):
         self.refresh_live_trades(snapshot)
         tokens = [r for r in snapshot['tokens'] if r.get('data_source') == 'DexScreener' and current_cap(r) is not None and current_cap(r) >= 40000 and (current_value(r, 'liquidity_usd', 'statistics_sampled_at') or 0) >= 10000]
         connected = bool(self.monitor.client.key)
-        self.connection_notice.setText('A token connection is required. Add your key in Settings. Saved records remain available.' if not connected else 'No current tokens meet the $40,000 minimum with $10,000 liquidity. Waiting for data.' if not tokens else '')
-        self.connection_notice.setVisible(not connected or not tokens or bool(state['error']))
-        feed_errors = [state.get(k) for k in ('error', 'ranking_error', 'flow_error') if state.get(k)]
-        if feed_errors:
-            self.connection_notice.setText(' | '.join(feed_errors))
-            self.connection_notice.setVisible(True)
+        self.connection_notice.setText('Connect token data in Settings to start scanning.')
+        diagnostics = [state.get(key) for key in ('error', 'ranking_error', 'flow_error', 'valuation_error') if state.get(key)]
+        diagnostic_text = '\n\n'.join(diagnostics) if diagnostics else 'No connection issues reported.'
+        if self.connection_diagnostics.toPlainText() != diagnostic_text:
+            self.connection_diagnostics.setPlainText(diagnostic_text)
         self.connection_button.setVisible(not connected)
         self.control_buttons['primary'].setText('Start monitoring' if connected else 'Connect data')
         self.control_buttons['primary'].setEnabled(not state['enabled'])
@@ -1113,7 +1117,7 @@ class DesktopWindow(QMainWindow):
         self.scanner_footer.setVisible(not exact and bool(filtered))
         self.scanner_empty.setVisible(not exact and not filtered)
         self.search_space.setVisible(exact)
-        self.connection_notice.setVisible(bool(state['error']) and not exact)
+        self.connection_notice.setVisible(not connected and not exact)
         for name in ['Live tokens', 'Watchlist']:
             model = self.tables[name].model()
             headings = list(model.headings)
