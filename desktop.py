@@ -27,6 +27,7 @@ from DesktopCredentials import load_key, save_key
 from CieloClient import CieloClient
 from KolscanDirectory import bundled_wallets, read_wallets
 from KollectorDirectory import WalletDirectory, normalize_profiles
+from ResearchWorkspace import ResearchWorkspace, FinancialWorkspace
 
 
 def icon():
@@ -717,6 +718,10 @@ class DesktopWindow(QMainWindow):
         self.live_empty.setWordWrap(True)
         live_box.addWidget(self.live_empty)
         self.tabs.addTab(live_page, 'Live trades')
+        self.research_page = ResearchWorkspace(store)
+        self.tabs.addTab(self.research_page, 'Research')
+        self.financial_page = FinancialWorkspace(store, self.research_page)
+        self.tabs.addTab(self.financial_page, 'Financial data')
         mcp_page = QWidget()
         mcp_box = QVBoxLayout(mcp_page)
         mcp_box.setSpacing(16)
@@ -1436,6 +1441,8 @@ class DesktopWindow(QMainWindow):
         if self.quitting:
             return
         self.quitting = True
+        self.research_page.stop_request()
+        self.financial_page.generation += 1
         self.timer.stop()
         self.lookup_timer.stop()
         self.lookup_generation += 1
@@ -1460,7 +1467,15 @@ def main():
     parser.add_argument('--responsiveness-test')
     parser.add_argument('--settings', action='store_true')
     parser.add_argument('--mcp', action='store_true')
+    parser.add_argument('--financial-mcp', action='store_true')
     args = parser.parse_args()
+    if args.financial_mcp:
+        from FinancialDatasets import create_server
+        from GemMcp import restore_stdio
+        directory = Path(args.data_dir) if args.data_dir else Path(os.environ.get('LOCALAPPDATA', str(Path.home()))) / 'GemSearch'
+        restore_stdio()
+        create_server(directory).run(transport='stdio')
+        return
     if args.mcp:
         from GemMcp import run_server
         directory = Path(args.data_dir) if args.data_dir else Path(os.environ.get('LOCALAPPDATA', str(Path.home()))) / 'GemSearch'
@@ -1476,6 +1491,7 @@ def main():
         QWidget{background:#101114;color:#e7e9ed;font-family:"Segoe UI";font-size:13px}
         QLabel{background:transparent}
         QPlainTextEdit{background:#101114;color:#e7e9ed;border:1px solid #30343b;border-radius:12px;padding:12px}
+        QTextBrowser#researchConversation{background:#101114;color:#e7e9ed;border:none;padding:12px;font-size:14px}
         QWidget#topbar{background:#17191d;border-bottom:1px solid #30343b}
         QWidget#searchCard{background:#17191d;border:1px solid #30343b;border-radius:12px}
         QLabel#tokenTitle{font-size:22px;font-weight:600}

@@ -12,7 +12,7 @@ class Blob(ctypes.Structure):
 
 def transform(value, decrypt=False):
     if os.name != 'nt':
-        raise ValueError('Saved credentials require Windows; use SOLSCAN_API_KEY elsewhere')
+        raise ValueError('Saved credentials require Windows; use provider environment variables elsewhere')
     buffer = ctypes.create_string_buffer(value)
     source = Blob(len(value), ctypes.cast(buffer, ctypes.POINTER(ctypes.c_ubyte)))
     target = Blob()
@@ -20,7 +20,7 @@ def transform(value, decrypt=False):
     function.argtypes = [ctypes.POINTER(Blob), ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, wintypes.DWORD, ctypes.POINTER(Blob)]
     function.restype = wintypes.BOOL
     if not function(ctypes.byref(source), None, None, None, None, 1, ctypes.byref(target)):
-        raise ValueError('Windows could not access the saved Solscan credential')
+        raise ValueError('Windows could not access the saved credential')
     ctypes.windll.kernel32.LocalFree.argtypes = [ctypes.c_void_p]
     try:
         return ctypes.string_at(target.data, target.size)
@@ -46,9 +46,10 @@ def source_key(directory, provider):
 
 
 def load_key(directory, provider='solscan'):
-    if provider not in ('solscan', 'cielo'):
+    if provider not in ('solscan', 'cielo', 'miro', 'financial'):
         raise ValueError('Unknown credential provider')
-    key = os.environ.get(provider.upper() + '_API_KEY', '').strip() or source_key(directory, provider)
+    variable = 'FINANCIAL_DATASETS_API_KEY' if provider == 'financial' else provider.upper() + '_API_KEY'
+    key = os.environ.get(variable, '').strip() or source_key(directory, provider)
     path = directory / (provider + '-key.dpapi')
     if key or not path.exists():
         return key
@@ -59,7 +60,7 @@ def load_key(directory, provider='solscan'):
 
 
 def save_key(directory, key, provider='solscan'):
-    if provider not in ('solscan', 'cielo'):
+    if provider not in ('solscan', 'cielo', 'miro', 'financial'):
         raise ValueError('Unknown credential provider')
     path = directory / (provider + '-key.dpapi')
     if key:

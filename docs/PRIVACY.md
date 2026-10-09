@@ -37,4 +37,6 @@ Solscan and Cielo receive requests when their integrations are used. Explorer an
 
 The local MCP connection exposes supported records to an assistant you connect. That assistant or its provider may process the returned data under its own policies. Do not connect assistants you do not trust with these records.
 
+Research sends entered questions and recent conversation history to the model endpoint you configure. Enabling local data access also allows supported GemSearch records to be supplied to that model through read-only tools. Conversation history is stored locally and can be cleared with New chat. Private model reasoning is not saved in conversation history. Model and Financial Datasets keys use local Windows credential protection and are excluded from copied MCP configuration. Financial queries send requested tickers and date ranges to Financial Datasets; these requests may consume provider credits. Stop prevents subsequent research requests but cannot recall a request already transmitted. Closing the scanner does not recall provider requests or remove local conversation history.
+
 Stopping monitoring stops new scheduled collection. It does not delete stored history or recall requests already sent. Close the app before removing local data, and keep credentials, databases and wallet information out of public bug reports.
