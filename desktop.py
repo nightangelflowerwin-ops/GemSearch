@@ -1491,6 +1491,7 @@ def main():
         QLineEdit:focus{border-color:#4285F4}
         QTabWidget::pane{border:none;background:transparent}
         QTableView{background:#101114;alternate-background-color:#17191d;border:1px solid #30343b;border-radius:12px;selection-background-color:#263753;selection-color:#e7e9ed}
+        QTableView#marketTable{border:none;border-radius:0}
         QTableView::item{padding:8px;border-bottom:1px solid #252930}
         QHeaderView::section{background:#1c1e23;color:#a3a9b3;padding:12px 8px;border:none;font-size:11px;font-weight:500}
         QCheckBox{spacing:10px;padding:6px}
