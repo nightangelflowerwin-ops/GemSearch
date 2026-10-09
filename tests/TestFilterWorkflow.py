@@ -35,7 +35,9 @@ class FilterWorkflowTests(unittest.TestCase):
             self.assertEqual(model.cells[0][9], '1')
             self.assertEqual(window.tables['Watchlist'].model().cells[0][9], '1')
             self.assertEqual(model.cells[0][5], '-5.00%')
-            self.assertIn('1 matching tokens', window.filter_summary_label.text())
+            self.assertEqual('1 token', window.filter_summary_label.text())
+            self.assertNotIn('>=', window.filter_summary_label.text())
+            self.assertEqual(window.filter_button.toolTip(), 'Filter tokens')
             self.assertEqual(store.get('TokenFilters')['buys_min'], 1000)
             window.background = True
             window.accept_snapshot({'tokens': store.tokens(), 'alerts': [], 'watchlist': store.watchlist()})

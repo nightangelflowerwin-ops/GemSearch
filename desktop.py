@@ -12,7 +12,7 @@ from PySide6.QtCore import Qt, QEvent, QTimer, QUrl, QLockFile, QAbstractTableMo
 from PySide6.QtGui import QAction, QColor, QIcon, QPainter, QPixmap, QDesktopServices, QShortcut, QKeySequence
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox, QLineEdit, QTabWidget, QTableView, QHeaderView, QSystemTrayIcon, QMenu, QCheckBox, QMessageBox, QScrollArea, QFileDialog, QListWidget, QPlainTextEdit, QInputDialog, QDialog, QFormLayout, QDialogButtonBox
 from MarketMetrics import current_flow
-from TokenFilters import DEFAULTS, matches, sort_key, activity_values, filter_summary
+from TokenFilters import DEFAULTS, matches, sort_key, activity_values
 from FilterDialog import FilterDialog
 from chains import EVM
 from DataQuality import current_cap, current_value, mint_status
@@ -511,12 +511,12 @@ class DesktopWindow(QMainWindow):
                 search_controls.addWidget(self.search, 1)
                 self.filter_button = QPushButton('Filter')
                 self.filter_button.clicked.connect(self.open_filters)
+                self.filter_summary_label = QLabel()
+                self.filter_summary_label.setObjectName('status')
+                search_controls.addWidget(self.filter_summary_label)
                 search_controls.addWidget(self.filter_button)
                 box.addLayout(search_controls)
                 box.addWidget(self.filter_panel)
-                self.filter_summary_label = QLabel()
-                self.filter_summary_label.setWordWrap(True)
-                box.addWidget(self.filter_summary_label)
                 self.lookup_panel = TokenSearchCard()
                 lookup_box = self.lookup_panel.layout()
                 self.lookup_label = self.lookup_panel.status
@@ -1108,9 +1108,9 @@ class DesktopWindow(QMainWindow):
         filtered.sort(key=lambda r: sort_key(r, self.applied_filters))
         timeframe = self.applied_filters.get('timeframe', 'h24')
         label = {'m5': '5M', 'h1': '1H', 'h6': '6H', 'h24': '24H'}[timeframe]
-        self.filter_summary_label.setText(filter_summary(self.applied_filters, len(filtered)))
+        self.filter_summary_label.setText(str(len(filtered)) + (' token' if len(filtered) == 1 else ' tokens'))
         self.filter_button.setText('Filters')
-        self.filter_button.setToolTip(filter_summary(self.applied_filters, len(filtered)))
+        self.filter_button.setToolTip('Filter tokens')
         exact = bool(lookup_key(self.search.text(), self.applied_filters.get('chain', '')))
         self.filter_summary_label.setVisible(not exact)
         self.tables['Live tokens'].setVisible(not exact and bool(filtered))
