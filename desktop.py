@@ -10,7 +10,7 @@ from pathlib import Path
 from urllib.parse import quote
 from PySide6.QtCore import Qt, QEvent, QTimer, QUrl, QLockFile, QAbstractTableModel, QObject, Signal
 from PySide6.QtGui import QAction, QColor, QIcon, QPainter, QPixmap, QDesktopServices, QShortcut, QKeySequence
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox, QLineEdit, QTabWidget, QTableView, QHeaderView, QSystemTrayIcon, QMenu, QCheckBox, QMessageBox, QScrollArea, QFileDialog, QListWidget, QPlainTextEdit
+from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox, QLineEdit, QTabWidget, QTableView, QHeaderView, QSystemTrayIcon, QMenu, QCheckBox, QMessageBox, QScrollArea, QFileDialog, QListWidget, QPlainTextEdit, QInputDialog, QDialog, QFormLayout, QDialogButtonBox
 from MarketMetrics import current_flow
 from TokenFilters import DEFAULTS, matches, sort_key, activity_values, filter_summary
 from FilterDialog import FilterDialog
@@ -25,7 +25,8 @@ from TokenLookup import lookup_key, lookup_token
 from TokenSearchView import TokenSearchCard, TokenDetailsDialog
 from DesktopCredentials import load_key, save_key
 from CieloClient import CieloClient
-from KolscanDirectory import bundled_wallets, read_wallets, SOURCE, CAPTURED
+from KolscanDirectory import bundled_wallets, read_wallets
+from KollectorDirectory import WalletDirectory, normalize_profiles
 
 
 def icon():
@@ -97,6 +98,10 @@ class TokenTableModel(QAbstractTableModel):
                 return record.get('name', '') + '\n' + record.get('address', record.get('wallet', ''))
             if self.headings[index.column()] == 'Market cap':
                 return str(record.get('market_cap_source', 'Not sampled')) + '\nSampled: ' + stamp(record.get('market_cap_updated_at'))
+            if self.headings[index.column()] == 'Identity evidence':
+                return '\n'.join([claim['source'] + ': ' + (claim.get('proof') or 'No ownership proof') + ' · ' + (claim.get('x_link') or 'No X link') + '\nSource snapshot: ' + (claim.get('built_at') or 'Not reported') for claim in record.get('claims', [])]) or 'Saved attribution'
+            if self.headings[index.column()] == 'Trader':
+                return record['wallet'] + ('\nDirectory label: ' + record['wallet_identity'] if record.get('wallet_identity') else '')
             if self.headings[index.column()] == 'Net 5m':
                 if record.get('live_flow_complete') and current_flow(record) is not None:
                     return 'Finalized pool buys minus sells in USD. Complete five-minute window ending 45 seconds behind live activity. USD references were sampled at collection.\nSampled: ' + stamp(record.get('live_flow_updated_at'))
@@ -133,21 +138,32 @@ class TokenTable(QTableView):
 
 
 class KOLWalletPage(QWidget):
+    directory_result = Signal(object)
+
     def __init__(self, directory):
         super().__init__()
         self.path = Path(directory) / 'kol-wallets.json'
         self.imported = []
+        self.directory = WalletDirectory(DesktopStore(directory))
+        self.directory_rows = self.directory.rows()
+        self.busy = False
+        self.directory_result.connect(self.accept_directory)
         self.page = 0
         box = QVBoxLayout(self)
-        self.notice = QLabel('50 saved wallets · ' + CAPTURED + '\nSelect a wallet to track finalized balance activity. Names come from a saved directory snapshot.')
+        self.notice = QLabel('Saved wallet identities. Search locally or look up a public profile.')
         self.notice.setWordWrap(True)
         box.addWidget(self.notice)
         self.search = QLineEdit()
         self.search.setPlaceholderText('Search KOL name or wallet address')
         self.search.textChanged.connect(self.filter_changed)
-        box.addWidget(self.search)
+        search_controls = QHBoxLayout()
+        search_controls.addWidget(self.search, 1)
+        self.lookup_button = QPushButton('Find KOL')
+        self.lookup_button.clicked.connect(self.lookup_profile)
+        search_controls.addWidget(self.lookup_button)
+        box.addLayout(search_controls)
         self.table = TokenTable()
-        self.table.setModel(TokenTableModel(['KOL name', 'Wallet address', 'List source', 'Captured'], self.table))
+        self.table.setModel(TokenTableModel(['KOL name', 'Wallet address', 'Network', 'Tags', 'Identity evidence'], self.table))
         self.table.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QTableView.SelectionMode.SingleSelection)
         self.table.setEditTriggers(QTableView.EditTrigger.NoEditTriggers)
@@ -162,7 +178,7 @@ class KOLWalletPage(QWidget):
         self.table.doubleClicked.connect(lambda index: self.open_wallet('https://solscan.io/account/'))
         box.addWidget(self.table, 1)
         actions = QHBoxLayout()
-        for label, callback in [('Copy wallet', self.copy_wallet), ('Explorer', lambda: self.open_wallet('https://solscan.io/account/')), ('Wallet profile', lambda: self.open_wallet('https://kolscan.io/account/')), ('Import list', self.import_list), ('Current leaderboard', lambda: QDesktopServices.openUrl(QUrl(SOURCE)))]:
+        for label, callback in [('Copy wallet', self.copy_wallet), ('Explorer', lambda: self.open_wallet('https://solscan.io/account/')), ('Wallet profile', self.open_profile), ('Import list', self.import_list), ('Edit tags', self.edit_tags), ('Tag coin', self.tag_coin), ('Refresh selected', self.refresh_selected)]:
             button = QPushButton(label)
             if label == 'Import list':
                 button.setObjectName('orange')
@@ -186,18 +202,25 @@ class KOLWalletPage(QWidget):
                 self.imported = read_wallets(self.path)
             except (OSError, ValueError) as error:
                 self.notice.setText(self.notice.text() + '\nSaved import could not be loaded: ' + str(error))
+        if not self.directory.store.get('identity_directory_migrated', False):
+            self.directory.apply(normalize_profiles(bundled_wallets(), 'Kolscan'), 'seed')
+            if self.imported:
+                self.directory.apply(normalize_profiles(self.imported, 'Imported'), 'import')
+            self.directory.store.set('identity_directory_migrated', True)
+            self.directory_rows = self.directory.rows()
         self.render()
 
     def render(self):
-        wallets = {row['address']: row for row in self.imported}
-        wallets.update({row['address']: row for row in bundled_wallets()})
+        wallets = {('solana', row['address']): row for row in bundled_wallets()}
+        wallets.update({('solana', row['address']): row for row in self.imported})
+        wallets.update({(row['chain'], row['address']): row for row in self.directory_rows})
         query = self.search.text().strip().casefold()
-        rows = sorted((row for row in wallets.values() if query in (row['name'] + ' ' + row['address']).casefold()), key=lambda row: row['name'].casefold())
+        rows = sorted((row for row in wallets.values() if query in (' '.join([row['name'], row['address'], *row.get('aliases', []), *row.get('tags', []), *[coin[field] for coin in row.get('coins', []) for field in ['label', 'address']]])).casefold()), key=lambda row: row['name'].casefold())
         size = max(1, (self.table.viewport().height() - 4) // 40)
         pages = max(1, (len(rows) + size - 1) // size)
         self.page = min(self.page, pages - 1)
-        self.table.model().replace(rows[self.page * size:(self.page + 1) * size], lambda row: [row['name'], row['address'], 'Imported' if row['source'] == 'Imported list' else 'Saved', row['captured']])
-        self.count.setText(str(len(rows)) + ' matching wallets / ' + str(len(wallets)) + ' saved · Page ' + str(self.page + 1) + ' of ' + str(pages))
+        self.table.model().replace(rows[self.page * size:(self.page + 1) * size], lambda row: [row['name'], row['address'], row.get('chain', 'solana').upper(), ', '.join(row.get('tags', []) + [coin['label'] for coin in row.get('coins', [])]), row.get('evidence', 'Saved attribution')])
+        self.count.setText(str(len(rows)) + ' matching / ' + str(len(wallets)) + ' saved wallets · Target 5,000 · Page ' + str(self.page + 1) + ' of ' + str(pages))
         self.previous.setEnabled(self.page > 0)
         self.following.setEnabled(self.page + 1 < pages)
 
@@ -225,25 +248,93 @@ class KOLWalletPage(QWidget):
     def open_wallet(self, base):
         row = self.selected()
         if row:
-            QDesktopServices.openUrl(QUrl(base + quote(row['address'], safe='')))
+            if row.get('chain') == 'evm':
+                QDesktopServices.openUrl(QUrl('https://dethective.com/kollector/?q=' + quote(row['address'], safe='')))
+            else:
+                QDesktopServices.openUrl(QUrl(base + quote(row['address'], safe='')))
+
+    def open_profile(self):
+        row = self.selected()
+        if row:
+            QDesktopServices.openUrl(QUrl('https://dethective.com/kollector/?q=' + quote(row['address'], safe='')))
+
+    def directory_job(self, action, label):
+        if self.busy:
+            return
+        self.busy = True
+        self.lookup_button.setEnabled(False)
+        self.notice.setText(label)
+        def work():
+            try:
+                count = action()
+                self.directory_result.emit({'rows': self.directory.rows(), 'count': count})
+            except (OSError, ValueError, TypeError, KeyError) as error:
+                self.directory_result.emit({'error': str(error)})
+        threading.Thread(target=work, daemon=True).start()
+
+    def accept_directory(self, result):
+        self.busy = False
+        self.lookup_button.setEnabled(True)
+        if 'error' in result:
+            self.notice.setText('Directory update failed: ' + result['error'])
+            return
+        self.directory_rows = result['rows']
+        self.notice.setText(str(result['count']) + ' wallet records updated. Profile links are source attribution; ownership is not independently verified.' if result.get('count') is not None else 'Saved wallet identities. Search locally or look up a public profile.')
+        self.filter_changed()
+
+    def lookup_profile(self):
+        query = self.search.text().strip()
+        if query:
+            self.directory_job(lambda: self.directory.lookup(query), 'Looking up public profile...')
+
+    def refresh_selected(self):
+        row = self.selected()
+        if row:
+            self.directory_job(lambda: self.directory.lookup(row['address']), 'Refreshing wallet identity...')
+
+    def reload_directory(self):
+        self.directory_job(lambda: None, 'Refreshing saved directory...')
+
+    def enable_refresh(self):
+        self.directory_timer = QTimer(self)
+        self.directory_timer.timeout.connect(self.reload_directory)
+        self.directory_timer.start(60000)
+
+    def edit_tags(self):
+        row = self.selected()
+        if not row:
+            return
+        tags, accepted = QInputDialog.getText(self, 'Wallet tags', 'Tags separated by commas', text=', '.join(row.get('tags', [])))
+        if accepted:
+            self.directory_job(lambda: self.directory.set_tags(row.get('chain', 'solana'), row['address'], tags), 'Saving wallet tags...')
+
+    def tag_coin(self):
+        row = self.selected()
+        if not row:
+            return
+        dialog = QDialog(self)
+        dialog.setWindowTitle('Label a coin for this wallet')
+        form = QFormLayout(dialog)
+        chain = QComboBox()
+        chain.addItems(['solana', *EVM])
+        address = QLineEdit()
+        label = QLineEdit()
+        form.addRow('Network', chain)
+        form.addRow('Token address', address)
+        form.addRow('Your label', label)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        form.addRow(buttons)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            token_chain, token_address, token_label = chain.currentText(), address.text().strip(), label.text()
+            self.directory_job(lambda: self.directory.link_coin(row.get('chain', 'solana'), row['address'], token_chain, token_address, token_label), 'Saving coin label...')
 
     def import_list(self):
-        filename, unused = QFileDialog.getOpenFileName(self, 'Import Solana wallets', '', 'Wallet lists (*.csv *.json)')
+        filename, unused = QFileDialog.getOpenFileName(self, 'Import wallet directory', '', 'Wallet lists (*.csv *.json)')
         if not filename:
             return
-        try:
-            incoming = read_wallets(filename)
-            merged = {row['address']: row for row in self.imported}
-            merged.update({row['address']: row for row in incoming})
-            if len(merged) > 10000:
-                raise ValueError('This app supports up to 10,000 imported wallets')
-            temporary = self.path.with_suffix('.tmp')
-            temporary.write_text(json.dumps(list(merged.values()), ensure_ascii=False), encoding='utf-8')
-            temporary.replace(self.path)
-            self.imported = list(merged.values())
-            self.filter_changed()
-        except (OSError, ValueError) as error:
-            QMessageBox.information(self, 'Wallet list', str(error))
+        self.directory_job(lambda: self.directory.import_file(filename), 'Importing wallet directory...')
 
 
 class DesktopWindow(QMainWindow):
@@ -716,6 +807,8 @@ class DesktopWindow(QMainWindow):
             active = lambda: not self.stop.is_set() and self.monitor.status()['enabled']
             threading.Thread(target=self.live_trades.listen, args=(self.stop, active), daemon=True).start()
             threading.Thread(target=self.live_trades.work, args=(self.stop, active), daemon=True).start()
+            threading.Thread(target=self.kol_page.directory.work, args=(self.stop, active), daemon=True).start()
+            self.kol_page.enable_refresh()
             threading.Thread(target=self.storage_worker, daemon=True).start()
             threading.Thread(target=self.snapshot_worker, daemon=True).start()
         self.refresh()
@@ -751,7 +844,10 @@ class DesktopWindow(QMainWindow):
         if selected:
             trades = [trade for trade in trades if trade['address'] == selected]
         names = {row['address']: row.get('name', row['address']) for row in snapshot['tokens']}
-        self.live_table.model().replace(trades, lambda row: [stamp(row['event_time']), names.get(row['address'], row['address'][:8]), row['side'], format(Decimal(row['base_amount']), ',.6f'), format(Decimal(row['quote_amount']), ',.6f') + ' ' + row['quote_symbol'], format(Decimal(row['price_quote']), '.8g') + ' ' + row['quote_symbol'], compact(row['value_usd']), row['confirmation'].capitalize(), row['wallet'][:6] + '...' + row['wallet'][-4:]])
+        wallet_names = {row['address']: row['name'] for row in self.kol_page.directory_rows if row['chain'] == 'solana'}
+        for trade in trades:
+            trade['wallet_identity'] = wallet_names.get(trade['wallet'])
+        self.live_table.model().replace(trades, lambda row: [stamp(row['event_time']), names.get(row['address'], row['address'][:8]), row['side'], format(Decimal(row['base_amount']), ',.6f'), format(Decimal(row['quote_amount']), ',.6f') + ' ' + row['quote_symbol'], format(Decimal(row['price_quote']), '.8g') + ' ' + row['quote_symbol'], compact(row['value_usd']), row['confirmation'].capitalize(), row['wallet_identity'] or row['wallet'][:6] + '...' + row['wallet'][-4:]])
         self.live_empty.setVisible(not trades)
         self.live_table.setVisible(bool(trades))
 
@@ -782,6 +878,9 @@ class DesktopWindow(QMainWindow):
     def track_directory_wallet(self):
         row = self.kol_page.selected()
         if row:
+            if row.get('chain') == 'evm':
+                QMessageBox.information(self, 'Wallet identity saved', 'This is an EVM identity record. Wallet transaction tracking currently supports Solana.')
+                return
             self.add_tracked_wallet(row['address'], row['name'])
 
     def track_entered_wallet(self):

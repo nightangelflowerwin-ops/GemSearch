@@ -31,6 +31,8 @@ Starting monitoring sends requested token and wallet addresses to market and blo
 
 Live trades subscribes to selected public pool addresses over a Solana RPC WebSocket while monitoring is active. Transaction signatures, decoded trade history and recovery cursors are stored locally. USD references use the existing market provider. Stopping monitoring closes the stream and pauses processing; saved history remains on disk.
 
+Wallet directory lookups send the entered handle or address to the public identity search provider. Saved lookups may be refreshed while monitoring is active. The provider can see these requests and your IP address. Identity claims, aliases, personal tags and coin labels are stored locally. The app does not reproduce the provider website's analytics beacon or send wallet copy and outbound-click events. Imported lists are read locally and are not uploaded by the import action.
+
 Solscan and Cielo receive requests when their integrations are used. Explorer and account buttons open third-party websites in your browser, where their own privacy policies apply. Optional Telegram notifications send configured alert content to Telegram. The desktop app does not upload its local database to a GemSearch-hosted service.
 
 The local MCP connection exposes supported records to an assistant you connect. That assistant or its provider may process the returned data under its own policies. Do not connect assistants you do not trust with these records.

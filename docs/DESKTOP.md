@@ -36,3 +36,7 @@ The table volume, price change and buy/sell counts now use the timeframe selecte
 # Live pool trades
 
 Open Live trades while monitoring to inspect supported Meteora DAMM v2 swaps, including buys, sells, pool prices, trader addresses and confirmation status. See [Live trades](LiveTrades.md) for coverage and flow measurement requirements.
+
+## Wallet identities and labels
+
+Wallet directory supports public profile lookup, saved aliases, personal wallet tags and coin labels. Saved profile queries refresh daily while monitoring is active. Known wallet names appear alongside collected live trades as directory labels. See [Wallet directory](WalletDirectory.md) for source attribution, bulk import and coverage limits.
