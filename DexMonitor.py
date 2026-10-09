@@ -84,7 +84,7 @@ class DexMonitor(SolscanMonitor):
         return state
 
     def poll(self):
-        if not self.status()['enabled'] or time.monotonic() - self.last_poll < 15:
+        if not self.status()['enabled'] or (self.last_poll and time.monotonic() - self.last_poll < 15):
             return
         with self.lock:
             generation = self.generation
@@ -92,7 +92,7 @@ class DexMonitor(SolscanMonitor):
         self.error = self.valuation_error = None
         self.checked = self.skipped = 0
         previous = {key: row for row in (self.tracked() if self.tracked else []) if (key := address_key(row.get('chain'), row.get('address')))}
-        if time.monotonic() - self.discovery_at >= 60:
+        if not self.discovery_at or time.monotonic() - self.discovery_at >= 60:
             discovered = []
             try:
                 for path in ['token-profiles/latest/v1', 'token-boosts/top/v1']:

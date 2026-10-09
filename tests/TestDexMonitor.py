@@ -98,6 +98,17 @@ class DexMonitorTests(unittest.TestCase):
                 monitor.poll()
                 self.assertEqual(request.call_count, count)
 
+    def test_first_scan_runs_before_one_minute_of_machine_uptime(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = DesktopStore(directory)
+            monitor = DexMonitor(TokenAlerts(store.connect), store.record, store.watchlist, store.tokens)
+            monitor.control(True)
+            def response(path):
+                return {'pairs': [pair()]} if path.startswith('latest/dex/tokens/') else [{'chainId': 'solana', 'tokenAddress': ADDRESS}]
+            with patch('DexMonitor.time.monotonic', return_value=1), patch('DexMonitor.request', side_effect=response), patch('DexMonitor.solana_supplies', return_value={}):
+                monitor.poll()
+            self.assertEqual(len(store.tokens()), 1)
+
     def test_stop_during_request_prevents_write(self):
         with tempfile.TemporaryDirectory() as directory:
             store = DesktopStore(directory)
