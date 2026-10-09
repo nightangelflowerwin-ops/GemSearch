@@ -133,6 +133,30 @@ class TokenTableModel(QAbstractTableModel):
 
 
 class TokenTable(QTableView):
+    def configure_market(self):
+        self.setObjectName('marketTable')
+        self.setWordWrap(True)
+        self.setTextElideMode(Qt.TextElideMode.ElideNone)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        header = self.horizontalHeader()
+        header.setStretchLastSection(False)
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
+        for index, width in enumerate((280, 75, 100, 105, 95, 90, 90, 70, 100, 80, 90)):
+            self.setColumnWidth(index, width)
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        header.setMinimumSectionSize(70)
+        self.verticalHeader().setMinimumSectionSize(42)
+        self.verticalHeader().setDefaultSectionSize(42)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if self.objectName() == 'marketTable':
+            available = self.viewport().width() - sum(self.columnWidth(i) for i in range(1, self.model().columnCount()))
+            self.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch if available >= 240 else QHeaderView.ResizeMode.Fixed)
+            if available < 240:
+                self.setColumnWidth(0, 240)
+            self.resizeRowsToContents()
+
     def rowCount(self):
         return self.model().rowCount()
 
@@ -406,10 +430,11 @@ class DesktopWindow(QMainWindow):
         body.addWidget(sidebar)
         workspace = QWidget()
         layout = QVBoxLayout(workspace)
-        layout.setContentsMargins(28, 28, 28, 16)
-        layout.setSpacing(16)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
         self.page_title = QLabel('Live tokens')
         self.page_title.setObjectName('pageTitle')
+        self.page_title.setContentsMargins(18, 12, 18, 12)
         layout.addWidget(self.page_title)
         self.tabs = QTabWidget()
         self.tabs.tabBar().hide()
@@ -464,7 +489,7 @@ class DesktopWindow(QMainWindow):
         for name, headings in [('Live tokens', ['Token', 'Chain', 'Price', 'Market cap', 'Vol 24h', 'Vol 5m', 'Net 5m', 'Buys', 'Liquidity', 'Check', 'Time']), ('Triggered alerts', ['Time', 'Chain', 'Token address', 'Trigger', 'Value']), ('Watchlist', ['Token', 'Chain', 'Price', 'Market cap', 'Vol 24h', 'Vol 5m', 'Net 5m', 'Buys', 'Liquidity', 'Check', 'Time']), ('Saved tokens', ['Token / address', 'Chain', 'Historical source', 'Historical market cap', 'Saved price', 'Sample time'])]:
             page = QWidget()
             box = QVBoxLayout(page)
-            box.setContentsMargins(10, 8, 10, 8)
+            box.setContentsMargins(16, 8, 16, 8)
             box.setSpacing(8)
             if name == 'Live tokens':
                 self.connection_notice = QLabel()
@@ -530,7 +555,9 @@ class DesktopWindow(QMainWindow):
             table.verticalHeader().hide()
             table.setAlternatingRowColors(True)
             table.doubleClicked.connect(lambda index, target=table: self.inspect(target, index.row()))
-            box.addWidget(table)
+            if name in ('Live tokens', 'Watchlist'):
+                table.configure_market()
+            box.addWidget(table, 1)
             actions = QHBoxLayout()
             if name != 'Triggered alerts':
                 copy = QPushButton('Copy address')
@@ -1015,6 +1042,8 @@ class DesktopWindow(QMainWindow):
         scroll = table.verticalScrollBar().value()
         if not table.model().replace(records, values):
             return
+        if table.objectName() == 'marketTable':
+            table.resizeRowsToContents()
         for index, record in enumerate(records):
             if selected_key and selected_key.get('chain') == record.get('chain') and selected_key.get('address') == record.get('address'):
                 table.selectRow(index)
@@ -1441,7 +1470,7 @@ def main():
         QLabel#muted{color:#a3a9b3;font-size:12px}
         QLabel#emptyState{color:#a3a9b3;font-size:15px;padding:36px}
         QLabel#brand{font-size:17px;font-weight:600;background:transparent}
-        QLabel#pageTitle{font-size:32px;font-weight:600;letter-spacing:-1px;background:transparent}
+        QLabel#pageTitle{font-size:22px;font-weight:600;letter-spacing:-1px;background:transparent}
         QLabel#eyebrow{color:#86868b;font-size:10px;font-weight:600;padding-bottom:12px}
         QWidget#sidebar{background:#1c1e23;border-right:1px solid #30343b}
         QListWidget#navigation{background:transparent;border:none;outline:none;font-size:13px}
